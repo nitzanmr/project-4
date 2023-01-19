@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 static int end_server = 0;
 
 void intHandler(int SIG_INT) {
@@ -14,14 +15,15 @@ void intHandler(int SIG_INT) {
 
 int main (int argc, char *argv[])
 {
-	
+	/* {charServer.c , port, url }*/
 	signal(SIGINT, intHandler);
 	int server_fd = 0;
-	conn_pool_t* pool = malloc(sizeof(conn_pool_t));
-	init_pool(pool);
+	conn_pool_t* pool;
    	struct sockaddr_in server_socket;
 	char buf[512];
 	int count_read = 0;
+	int on = 1;
+
 	/*************************************************************/
 	/* Create an AF_INET stream socket to receive incoming      */
 	/* connections on                                            */
@@ -30,28 +32,30 @@ int main (int argc, char *argv[])
 		printf("Usage: socket failed");
 		exit(1);
 	}
-   
-   
+	server_socket.sin_family = AF_INET;
+	server_socket.sin_addr.s_addr = htonl(argv[2]);
+    server_socket.sin_port = htons(argv[1]);
 	/*************************************************************/
 	/* Set socket to be nonblocking. All of the sockets for      */
 	/* the incoming connections will also be nonblocking since   */
 	/* they will inherit that state from the listening socket.   */
 	/*************************************************************/
-	ioctl(...);
+	ioctl(server_fd, (int)FIONBIO, (char *)&on);
 	/*************************************************************/
 	/* Bind the socket                                           */
 	/*************************************************************/
-	bind(...);
+	bind(server_fd,(struct sockaddr*)& server_socket,sizeof(server_socket));
 
 	/*************************************************************/
 	/* Set the listen back log                                   */
 	/*************************************************************/
-	listen(...);
+	listen(server_fd,5);
 
 	/*************************************************************/
 	/* Initialize fd_sets  			                             */
 	/*************************************************************/
-	
+	pool = malloc(sizeof(conn_pool_t));
+	init_pool(pool);
 	/*************************************************************/
 	/* Loop waiting for incoming connects, for incoming data or  */
 	/* to write data, on any of the connected sockets.           */
@@ -102,20 +106,28 @@ int main (int argc, char *argv[])
 				/* Receive incoming data his socket             */
 				/****************************************************/
 				else{
-					while((count_read = read(cur_conn->fd,buf,511)) == 511){
-						add_msg(cur_conn->fd,buf,512,pool);
+					if((count_read = read(cur_conn->fd,buf,511)) == 0){
+						/*the client closed the socket and we cannot read from it..*/
+						remove_conn(cur_conn,server_fd);
 					}
-					if(count_read != 0){
-						add_msg(cur_conn->fd,buf,count_read,pool);
+					else{
+						add_msg(cur_conn,buf,count_read,pool);
+						while((count_read = read(cur_conn->fd,buf,511)) == 511){
+							add_msg(cur_conn->fd,buf,512,pool);
+						}
+						if(count_read != 0){
+							add_msg(cur_conn->fd,buf,count_read,pool);
+						}
+					}
+					
 
-					}
 				}
 				/* If the connection has been closed by client 		*/
                 /* remove the connection (remove_conn(...))    		*/
 							
 				/**********************************************/
 				/* Data was received, add msg to all other    */
-				/* connectios					  			  */
+				/* connections					  			  */
 				/**********************************************/
                 
 		                  
@@ -124,9 +136,9 @@ int main (int argc, char *argv[])
 			/*******************************************************/
 			/* Check to see if this descriptor is ready for write  */
 			/*******************************************************/
-			if (FD_ISSET(cur_conn->fd,pool->ready_write_set) {
+			if (FD_ISSET(cur_conn->fd,&pool->ready_write_set)) {
 				/* try to write all msgs in queue to sd */
-				write_to_client(...);
+				write_to_client(cur_conn->fd,pool);
 		 	}
 		 /*******************************************************/
 		 
@@ -260,7 +272,19 @@ int write_to_client(int sd,conn_pool_t* pool) {
 	 * 1. write all msgs in queue 
 	 * 2. deallocate each writen msg 
 	 * 3. if all msgs were writen successfully, there is nothing else to write to this fd... */
-	
+	conn_t* cur_conn = pool->conn_head;
+	while(cur_conn->fd != sd){
+		if(cur_conn->next != NULL){
+			cur_conn = cur_conn->next;	
+		}
+		else return 1;/*check if the sd given exits in the pool*/
+	}
+	while(cur_conn->write_msg_head != NULL){
+		write(sd,cur_conn->write_msg_head,cur_conn->write_msg_head->size);
+		cur_conn->write_msg_head = cur_conn->write_msg_head->next;
+		free(cur_conn->write_msg_head->prev);
+		cur_conn->write_msg_head->prev = NULL;
+	}
 	return 0;
 }
 
