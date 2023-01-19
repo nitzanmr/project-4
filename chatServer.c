@@ -23,7 +23,7 @@ int main (int argc, char *argv[])
 	char buf[512];
 	int count_read = 0;
 	int on = 1;
-
+	int check = 0;
 	/*************************************************************/
 	/* Create an AF_INET stream socket to receive incoming      */
 	/* connections on                                            */
@@ -40,22 +40,41 @@ int main (int argc, char *argv[])
 	/* the incoming connections will also be nonblocking since   */
 	/* they will inherit that state from the listening socket.   */
 	/*************************************************************/
-	ioctl(server_fd, (int)FIONBIO, (char *)&on);
+	check = ioctl(server_fd, (int)FIONBIO, (char *)&on);
+	if(check <0){
+		printf("Usage: ioctl failed ");
+		return 1;
+	}
 	/*************************************************************/
 	/* Bind the socket                                           */
 	/*************************************************************/
-	bind(server_fd,(struct sockaddr*)& server_socket,sizeof(server_socket));
-
+	check = bind(server_fd,(struct sockaddr*)& server_socket,sizeof(server_socket));
+	if(check<0) {
+		printf("Usage: bind failed");
+		return 1;
+	}
 	/*************************************************************/
 	/* Set the listen back log                                   */
 	/*************************************************************/
-	listen(server_fd,5);
+	check = listen(server_fd,5);
+	if(check < 0){
+		printf("Usage: listen failed");
+		return 1;
+	}
 
 	/*************************************************************/
 	/* Initialize fd_sets  			                             */
 	/*************************************************************/
 	pool = malloc(sizeof(conn_pool_t));
-	init_pool(pool);
+	if(pool == NULL){
+		printf("Usage: malloc pool failed");
+		return 1;
+	}
+	check = init_pool(pool);
+	if(check == 1){
+		printf("Usage: init pool failed");
+		return 1;
+	}
 	/*************************************************************/
 	/* Loop waiting for incoming connects, for incoming data or  */
 	/* to write data, on any of the connected sockets.           */
@@ -65,7 +84,7 @@ int main (int argc, char *argv[])
 		/**********************************************************/
 		/* Copy the master fd_set over to the working fd_set.     */
 		/**********************************************************/
-		
+
 		/**********************************************************/
 		/* Call select() 										  */
 		/**********************************************************/
@@ -111,6 +130,7 @@ int main (int argc, char *argv[])
 						remove_conn(cur_conn,server_fd);
 					}
 					else{
+						/*adding the messege in a 512 size packages to the messeges of all the connections.*/
 						add_msg(cur_conn,buf,count_read,pool);
 						while((count_read = read(cur_conn->fd,buf,511)) == 511){
 							add_msg(cur_conn->fd,buf,512,pool);
