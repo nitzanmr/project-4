@@ -1,0 +1,9 @@
+chatServer.c: In function ‘main’:
+chatServer.c:93:23: warning: format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘struct conn *’ [-Wformat=]
+   93 |   printf("curconn is %d in %d is %d\nis it set: %d\n\n",pool->conn_head,i,cur_conn->fd,FD_ISSET(cur_conn->fd,&pool->ready_read_set));
+      |                      ~^                                 ~~~~~~~~~~~~~~~
+      |                       |                                     |
+      |                       int                                   struct conn *
+chatServer.c:29:17: warning: variable ‘timeout’ set but not used [-Wunused-but-set-variable]
+   29 |  struct timeval timeout;
+      |                 ^~~~~~~

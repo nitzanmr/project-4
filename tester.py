@@ -49,7 +49,7 @@ def valgrind_test():
     return valgrind.returncode == 0
 
 def check_init_server():
-    status = subprocess.run(f"./{EXECUTABLE} ",shell=True)
+    status = subprocess.run(f"./{EXECUTABLE} 8068 127.0.0.1",shell=True)
     if status.returncode  != 0:
         print("[-]FAILED! test tasks bigger then number of threads")
         return False
@@ -87,7 +87,8 @@ def setup():
         return return_val
 if __name__ == "__main__":
     compilation_status = setup()
-    
+    t_check_init = check_init_server()
     t = PrettyTable(['Test', 'Result'])
+    t.add_row(['init',t_check_init])
     t.align['Test'] = 'l'
     print(t)
