@@ -5,6 +5,8 @@ from prettytable import PrettyTable
 import requests
 import json
 import sys
+import signal
+
 EXECUTABLE = "ex4"
 C_FILES = "chatServer.c"
 H_FILES = "chatServer.h"   
@@ -36,7 +38,7 @@ def valgrind_test():
         try:
             valgrind = subprocess.run(
                 "valgrind --leak-check=full --tool=memcheck --show-leak-kinds=all --track-origins=yes --verbose "
-                f"--error-exitcode=1 -v --log-file=valgrind-out.txt ./{EXECUTABLE} 8070 5 2",
+                f"--error-exitcode=1 -v --log-file=valgrind-out.txt ./{EXECUTABLE} 8066 127.0.0.1",
                 stdout=out_file, text=True, shell=True, timeout=60)
 
         except subprocess.TimeoutExpired:
@@ -46,11 +48,12 @@ def valgrind_test():
     if check_leaks():
         return False
 
-    return valgrind.returncode == 0
+    return valgrind.returncode == -2
 
 def check_init_server():
     status = subprocess.run(f"./{EXECUTABLE} 8068 127.0.0.1",shell=True)
-    if status.returncode  != 0:
+    print(status.returncode)
+    if status.returncode  != -2:
         print("[-]FAILED! test tasks bigger then number of threads")
         return False
 
@@ -85,10 +88,20 @@ def setup():
             return_val = "Error"
 
         return return_val
+
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
+    # print('Press Ctrl+C')
+    # signal.pause()
     compilation_status = setup()
     t_check_init = check_init_server()
+    t_valgrind = valgrind_test()
     t = PrettyTable(['Test', 'Result'])
     t.add_row(['init',t_check_init])
+    t.add_row(['valgrind',t_valgrind])
     t.align['Test'] = 'l'
     print(t)
