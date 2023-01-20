@@ -231,6 +231,7 @@ int init_pool(conn_pool_t* pool) {
 	return 0;
 }
 int add_conn(int sd, conn_pool_t* pool) {
+
 	/*
 	 * 1. allocate connection and init fields
 	 * 2. add connection to pool
@@ -330,7 +331,6 @@ int add_msg(int sd,char* buffer,int len,conn_pool_t* pool) {
 }
 
 int write_to_client(int sd,conn_pool_t* pool) {
-	
 	/*
 	 * 1. write all msgs in queue 
 	 * 2. deallocate each writen msg 
@@ -343,20 +343,20 @@ int write_to_client(int sd,conn_pool_t* pool) {
 		else return 1;/*check if the sd given exits in the pool*/
 	}
 	while(cur_conn->write_msg_head != NULL){
+		/*write to the client all the packagees */
 		write(sd,cur_conn->write_msg_head->message,cur_conn->write_msg_head->size);
 		if( cur_conn->write_msg_head->next != NULL){
 			cur_conn->write_msg_head = cur_conn->write_msg_head->next;
 			free(cur_conn->write_msg_head->prev);
-
 			cur_conn->write_msg_head->prev = NULL;
 		}
 		else{
+			/*free the messege at the end*/
 			free(cur_conn->write_msg_head);
 			cur_conn->write_msg_head = NULL;
 			FD_CLR(sd,&pool->write_set);
 			break;
 		}
-
 	}
 	return 0;
 }
