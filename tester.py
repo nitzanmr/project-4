@@ -38,7 +38,7 @@ def valgrind_test():
         try:
             valgrind = subprocess.run(
                 "valgrind --leak-check=full --tool=memcheck --show-leak-kinds=all --track-origins=yes --verbose "
-                f"--error-exitcode=1 -v --log-file=valgrind-out.txt ./{EXECUTABLE} 8064",
+                f"--error-exitcode=1 -v --log-file=valgrind-out.txt ./{EXECUTABLE} 8062",
                 stdout=out_file, text=True, shell=True, timeout=60)
 
         except subprocess.TimeoutExpired:
