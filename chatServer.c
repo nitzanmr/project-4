@@ -167,16 +167,15 @@ int main (int argc, char *argv[])
 						/*adding the messege in a 512 size packages to the messeges of all the connections.*/
 						add_msg(cur_conn->fd,buf,count_read,pool);
 						printf("finshed adding the messege\n");
-						if(count_read == 512){
+						if(count_read == 511){
 							while((count_read = read(cur_conn->fd,buf,510)) == 512){
-								add_msg(cur_conn->fd,buf,512,pool);
+								add_msg(cur_conn->fd,buf,count_read,pool);
 							}
 							printf("count_read is : %d\n",count_read);
 							if(count_read != 0){
 								add_msg(cur_conn->fd,buf,count_read,pool);
 							}
-						}
-						
+						}	
 					}
 					printf("%d bytes received from sd %d\n", count_read,cur_conn->fd);
 
@@ -202,11 +201,9 @@ int main (int argc, char *argv[])
 	/*************************************************************/
 	for (conn_t* cur_conn = pool->conn_head;cur_conn != NULL; cur_conn = cur_conn->next){
 		if(cur_conn->prev != NULL){
-			close(cur_conn->prev->fd);
 			remove_conn(cur_conn->prev->fd,pool);
 		}
 		if(cur_conn->next ==NULL){
-			close(cur_conn->fd);
 			remove_conn(cur_conn->fd,pool);
 			break;
 		}
@@ -277,11 +274,12 @@ int remove_conn(int sd, conn_pool_t* pool) {
 	}
 	printf("removing connection with sd %d \n", sd);
 	if(current_conn == pool->conn_head){
-		pool->conn_head = current_conn->next;
+		pool->conn_head = pool->conn_head->next;
 	}
 	printf("after\n");
 	if(current_conn->prev != NULL){
 		current_conn->prev->next = current_conn->next;
+		current_conn->next->prev = current_conn->prev;
 	}
 	/*what is remove from sets.*/
 	/*freeing the data of the connection */
@@ -289,11 +287,13 @@ int remove_conn(int sd, conn_pool_t* pool) {
 		if(current_conn->fd == pool->maxfd)pool->maxfd = current_conn->next->fd;
 		current_conn->next->prev = NULL;
 	}
+	close(current_conn->fd);
 	free(current_conn);
 	FD_CLR(sd,&pool->read_set);
 	FD_CLR(sd,&pool->ready_read_set);
 	FD_CLR(sd,&pool->ready_write_set);
 	FD_CLR(sd,&pool->write_set);
+
 	return 0;
 }
 
@@ -314,14 +314,13 @@ int add_msg(int sd,char* buffer,int len,conn_pool_t* pool) {
 			if(cur_con->write_msg_head==NULL){
 				new_msg->prev = NULL;
 				cur_con->write_msg_head = new_msg;
-				cur_con->write_msg_tail = new_msg;
 			}
 			else{
 				if(cur_con->write_msg_tail==cur_con->write_msg_head){
 					cur_con->write_msg_head->next = new_msg;
 				}
 				cur_con->write_msg_tail->next = new_msg;
-				cur_con->write_msg_tail= new_msg;
+				cur_con->write_msg_tail= cur_con->write_msg_tail->next;
 			}
 			/*set the write flag for it to write the new messege to the client*/
 			FD_SET(cur_con->fd,&pool->write_set);
