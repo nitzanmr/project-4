@@ -24,11 +24,11 @@ int main (int argc, char *argv[])
 	server_fd = 0;
 	conn_pool_t* pool;
    	struct sockaddr_in server_socket;
-	char buf[512];
+	char buf[4096];
 	int count_read = 0;
 	int on = 1;
 	int check = 0;
-
+	int total_read = 0;
 	/*************************************************************/
 	/* Create an AF_INET stream socket to receive incoming      */
 	/* connections on                                            */
@@ -143,8 +143,8 @@ int main (int argc, char *argv[])
 				/* Receive incoming data his socket             */
 				/****************************************************/
 				else{
-					bzero(buf,512);
-					if((count_read = read(cur_conn->fd,buf,511)) == 0){
+					bzero(buf,4096);
+					if((count_read = read(cur_conn->fd,buf,4095)) == 0){
 						/*the client closed the socket and we cannot read from it..*/
 						/* If the connection has been closed by client 		*/
                 		/* remove the connection (remove_conn(...))    		*/
@@ -160,20 +160,22 @@ int main (int argc, char *argv[])
 						/* connections					  			  */
 						/**********************************************/
 						printf("Descriptor %d is readable\n", cur_conn->fd);
-
+						total_read +=count_read;
 						// printf("the messege is : %s of length %d\n",buf,count_read);
-						/*adding the messege in a 512 size packages to the messeges of all the connections.*/
+						/*adding the messege in a 4096 size packages to the messeges of all the connections.*/
 						add_msg(cur_conn->fd,buf,count_read,pool);
-						if(count_read == 511){
-							while((count_read = read(cur_conn->fd,buf,510)) == 512){
+						if(count_read == 4095){
+							while((count_read = read(cur_conn->fd,buf,4095)) == 4096){
 								add_msg(cur_conn->fd,buf,count_read,pool);
+								total_read = count_read;
 							}
 							if(count_read != 0){
+								total_read = count_read;
 								add_msg(cur_conn->fd,buf,count_read,pool);
 							}
-						}	
+						}
+						printf("%d bytes received from sd %d\n", total_read, cur_conn->fd);
 					}
-					// printf("%d bytes received from sd %d\n", count_read,cur_conn->fd);
 				}                
 			} /* End of if (FD_ISSET(read)) */
 			/*******************************************************/

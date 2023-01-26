@@ -118,4 +118,3 @@ before everytime it waits in select it will print the value of pool->max_fd
 - Usage: malloc pool failed : get when the malloc for the poll failed inside the main.
 - Usage: listen failed : when the listen falied.
 - Usage: bind failed: happens after a crush or ^z you need to change the port given to the program.
-- Usage: 

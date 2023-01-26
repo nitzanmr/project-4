@@ -51,7 +51,7 @@ def valgrind_test():
     return valgrind.returncode == -2
 
 def check_init_server():
-    status = subprocess.run(f"./{EXECUTABLE} 8068",shell=True)
+    status = subprocess.run(f"./{EXECUTABLE} 8067",shell=True)
     print(status.returncode)
     if status.returncode  != -2:
         print("[-]FAILED! test tasks bigger then number of threads")
