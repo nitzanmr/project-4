@@ -143,7 +143,6 @@ int main (int argc, char *argv[])
 				/* Receive incoming data his socket             */
 				/****************************************************/
 				else{
-					printf("Descriptor %d is readable\n", cur_conn->fd);
 					bzero(buf,512);
 					if((count_read = read(cur_conn->fd,buf,511)) == 0){
 						/*the client closed the socket and we cannot read from it..*/
@@ -154,14 +153,14 @@ int main (int argc, char *argv[])
 						cur_conn = cur_conn->next;
 						remove_conn(cur_conn->prev->fd,pool);
 						check = 1;
-						// cur_conn = cur_conn->next; 
 					}
 					else{
 						/**********************************************/
 						/* Data was received, add msg to all other    */
 						/* connections					  			  */
 						/**********************************************/
-						
+						printf("Descriptor %d is readable\n", cur_conn->fd);
+
 						// printf("the messege is : %s of length %d\n",buf,count_read);
 						/*adding the messege in a 512 size packages to the messeges of all the connections.*/
 						add_msg(cur_conn->fd,buf,count_read,pool);
@@ -169,7 +168,6 @@ int main (int argc, char *argv[])
 							while((count_read = read(cur_conn->fd,buf,510)) == 512){
 								add_msg(cur_conn->fd,buf,count_read,pool);
 							}
-							printf("count_read is : %d\n",count_read);
 							if(count_read != 0){
 								add_msg(cur_conn->fd,buf,count_read,pool);
 							}
@@ -177,7 +175,7 @@ int main (int argc, char *argv[])
 					}
 					// printf("%d bytes received from sd %d\n", count_read,cur_conn->fd);
 				}                
-			} /* End of if (FD_ISSET()) */
+			} /* End of if (FD_ISSET(read)) */
 			/*******************************************************/
 			/* Check to see if this descriptor is ready for write  */
 			/*******************************************************/
@@ -267,7 +265,6 @@ int remove_conn(int sd, conn_pool_t* pool) {
 	*/
 	conn_t* current_conn = pool->conn_head;
 	/*go to the placement of the sd inside the pool*/
-	printf("\ncurrent_conn fd is :%d\n",current_conn->fd);
 	while(current_conn->fd != sd){
 
 		if(NULL == current_conn->next)return 1;
@@ -277,7 +274,6 @@ int remove_conn(int sd, conn_pool_t* pool) {
 	if(current_conn == pool->conn_head){
 		pool->conn_head = pool->conn_head->next;
 	}
-	printf("after\n");
 	if(current_conn->prev != NULL){
 		current_conn->prev->next = current_conn->next;
 		current_conn->next->prev = current_conn->prev;
