@@ -19,7 +19,7 @@ void intHandler(int SIG_INT) {
 }
 int main (int argc, char *argv[])
 {
-	/* {charServer.c , port, url }*/
+	/* {chatServer.c , port }*/
 	signal(SIGINT, intHandler);
 	FD_ZERO(&end);
 	server_fd = 0;
@@ -40,7 +40,7 @@ int main (int argc, char *argv[])
 	bzero(&server_socket, sizeof(server_socket));
 	server_socket.sin_family = AF_INET;
 	// printf("the addr is: %s\n",argv[2]);
-	server_socket.sin_addr.s_addr = inet_addr(argv[2]);
+	server_socket.sin_addr.s_addr = htonl(INADDR_ANY);
     server_socket.sin_port = htons(atoi(argv[1]));
 	/*************************************************************/
 	/* Set socket to be nonblocking. All of the sockets for      */
@@ -82,9 +82,7 @@ int main (int argc, char *argv[])
 		printf("Usage: init pool failed\n");
 		return 1;
 	}
-	printf("\nbefore adding server-fd\n");
 	add_conn(server_fd,pool);
-	printf("\nafter adding server-fd\n");
 	pool->ready_read_set = pool->read_set;
 	/*************************************************************/
 	/* Loop waiting for incoming connects, for incoming data or  */
@@ -162,11 +160,9 @@ int main (int argc, char *argv[])
 						/* connections					  			  */
 						/**********************************************/
 						
-						printf("\nadded the messege \n");
-						printf("the messege is : %s of length %d\n",buf,count_read);
+						// printf("the messege is : %s of length %d\n",buf,count_read);
 						/*adding the messege in a 512 size packages to the messeges of all the connections.*/
 						add_msg(cur_conn->fd,buf,count_read,pool);
-						printf("finshed adding the messege\n");
 						if(count_read == 511){
 							while((count_read = read(cur_conn->fd,buf,510)) == 512){
 								add_msg(cur_conn->fd,buf,count_read,pool);
@@ -177,8 +173,7 @@ int main (int argc, char *argv[])
 							}
 						}	
 					}
-					printf("%d bytes received from sd %d\n", count_read,cur_conn->fd);
-
+					// printf("%d bytes received from sd %d\n", count_read,cur_conn->fd);
 				}                
 			} /* End of if (FD_ISSET()) */
 			/*******************************************************/
@@ -201,9 +196,11 @@ int main (int argc, char *argv[])
 	/*************************************************************/
 	for (conn_t* cur_conn = pool->conn_head;cur_conn != NULL; cur_conn = cur_conn->next){
 		if(cur_conn->prev != NULL){
+			close(cur_conn->prev->fd);
 			remove_conn(cur_conn->prev->fd,pool);
 		}
 		if(cur_conn->next ==NULL){
+			close(cur_conn->fd);
 			remove_conn(cur_conn->fd,pool);
 			break;
 		}
@@ -287,7 +284,6 @@ int remove_conn(int sd, conn_pool_t* pool) {
 		if(current_conn->fd == pool->maxfd)pool->maxfd = current_conn->next->fd;
 		current_conn->next->prev = NULL;
 	}
-	close(current_conn->fd);
 	free(current_conn);
 	FD_CLR(sd,&pool->read_set);
 	FD_CLR(sd,&pool->ready_read_set);

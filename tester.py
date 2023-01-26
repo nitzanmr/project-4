@@ -38,7 +38,7 @@ def valgrind_test():
         try:
             valgrind = subprocess.run(
                 "valgrind --leak-check=full --tool=memcheck --show-leak-kinds=all --track-origins=yes --verbose "
-                f"--error-exitcode=1 -v --log-file=valgrind-out.txt ./{EXECUTABLE} 8065 127.0.0.1",
+                f"--error-exitcode=1 -v --log-file=valgrind-out.txt ./{EXECUTABLE} 8064",
                 stdout=out_file, text=True, shell=True, timeout=60)
 
         except subprocess.TimeoutExpired:
@@ -51,7 +51,7 @@ def valgrind_test():
     return valgrind.returncode == -2
 
 def check_init_server():
-    status = subprocess.run(f"./{EXECUTABLE} 8068 127.0.0.1",shell=True)
+    status = subprocess.run(f"./{EXECUTABLE} 8068",shell=True)
     print(status.returncode)
     if status.returncode  != -2:
         print("[-]FAILED! test tasks bigger then number of threads")
